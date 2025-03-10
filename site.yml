@@ -1,0 +1,33 @@
+---
+- name: Установка сервисов на сервер мониторинга (Server 1)
+  hosts: monitoring_servers
+  roles:
+    - zabbix_server
+    - zabbix_agent
+    - grafana
+    - filebeat
+    - openvpn_server  # OpenVPN сервер
+  tags: monitoring
+
+- name: Установка сервисов на веб-сервер (Server 2)
+  hosts: web_servers
+  roles:
+    - nginx
+    - apache
+    - php
+    - zabbix_agent
+    - filebeat
+    - bind
+    - mail
+    - openvpn_client  # Подключение к VPN
+  tags: web
+
+- name: Установка сервисов на сервер базы данных (Server 3)
+  hosts: db_servers
+  roles:
+    - postgresql_server  # PostgreSQL 12
+    - zabbix_agent
+    - elk
+    - openvpn_client  # Подключение к VPN
+  tags: database
+

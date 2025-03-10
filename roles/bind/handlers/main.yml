@@ -1,0 +1,6 @@
+---
+- name: Перезапуск bind
+  ansible.builtin.service:
+    name: bind
+    state: restarted
+  when: .changed

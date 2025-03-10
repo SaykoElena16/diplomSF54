@@ -1,0 +1,18 @@
+---
+- name: Установка OpenVPN для openvpn_server
+  ansible.builtin.apt:
+    name: openvpn
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Установка OpenVPN для openvpn_server (RHEL-based)
+  ansible.builtin.yum:
+    name: openvpn
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Копирование конфигурации OpenVPN
+  template:
+    src: openvpn_server.conf.j2
+    dest: /etc/openvpn/openvpn_server.conf
+  notify: Перезапуск OpenVPN

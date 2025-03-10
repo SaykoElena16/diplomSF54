@@ -1,0 +1,6 @@
+---
+- name: Перезапуск OpenVPN
+  ansible.builtin.service:
+    name: openvpn
+    state: restarted
+  when: openvpn_config.changed

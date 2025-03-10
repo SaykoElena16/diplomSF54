@@ -1,0 +1,6 @@
+---
+- name: Перезапуск filebeat
+  ansible.builtin.service:
+    name: filebeat
+    state: restarted
+  when: .changed

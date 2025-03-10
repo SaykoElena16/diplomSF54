@@ -1,0 +1,24 @@
+- name: Эмуляция установки zabbix_agent на серверах 1 и 2
+  debug:
+    msg: "Эмуляция: Zabbix Agent установлен."
+  when: inventory_hostname in ["server-1", "server-2"]
+
+- name: Установка Zabbix Agent на сервере 3 (Debian)
+  ansible.builtin.apt:
+    name: zabbix-agent
+    state: present
+  when: ansible_os_family == "Debian" and inventory_hostname == "server-3"
+
+- name: Установка Zabbix Agent на сервере 3 (RHEL-based)
+  ansible.builtin.yum:
+    name: zabbix-agent
+    state: present
+  when: ansible_os_family == "RedHat" and inventory_hostname == "server-3"
+
+- name: Конфигурирование zabbix_agent
+  template:
+    src: templates/zabbix_agent.conf.j2
+    dest: /etc/zabbix_agent/zabbix_agent.conf
+  notify: Перезапуск zabbix_agent
+  when: inventory_hostname == "server-3"
+

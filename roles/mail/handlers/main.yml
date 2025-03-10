@@ -1,0 +1,6 @@
+---
+- name: Перезапуск mail
+  ansible.builtin.service:
+    name: mail
+    state: restarted
+  when: .changed

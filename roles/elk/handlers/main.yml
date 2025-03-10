@@ -1,0 +1,6 @@
+---
+- name: Перезапуск elk
+  ansible.builtin.service:
+    name: elk
+    state: restarted
+  when: .changed

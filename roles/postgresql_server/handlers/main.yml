@@ -1,0 +1,6 @@
+---
+- name: Перезапуск postgresql_server
+  ansible.builtin.service:
+    name: postgresql_server
+    state: restarted
+  when: .changed

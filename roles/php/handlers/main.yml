@@ -1,0 +1,6 @@
+---
+- name: Перезапуск php
+  ansible.builtin.service:
+    name: php
+    state: restarted
+  when: .changed

@@ -1,0 +1,6 @@
+---
+- name: Перезапуск grafana
+  ansible.builtin.service:
+    name: grafana
+    state: restarted
+  when: .changed
