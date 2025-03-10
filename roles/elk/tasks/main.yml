@@ -16,3 +16,29 @@
     src: templates/elk.conf.j2
     dest: /etc/elk/elk.conf
   notify: Перезапуск elk
+
+# ✅ Проверка перед установкой elk
+- name: Проверка, установлен ли elk (Debian)
+  shell: dpkg -l | grep -q elasticsearch
+  register: elk_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка elk (если отсутствует)
+  ansible.builtin.apt:
+    name: elk
+    state: present
+  when: ansible_os_family == "Debian" and elk_check.rc != 0
+
+- name: Проверка, установлен ли elk (RHEL)
+  shell: rpm -q elk
+  register: elk_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка elk (если отсутствует)
+  ansible.builtin.yum:
+    name: elk
+    state: present
+  when: ansible_os_family == "RedHat" and elk_check.rc != 0
+

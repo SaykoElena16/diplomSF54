@@ -16,3 +16,29 @@
     src: templates/bind.conf.j2
     dest: /etc/bind/bind.conf
   notify: Перезапуск bind
+
+# ✅ Проверка перед установкой bind
+- name: Проверка, установлен ли bind (Debian)
+  shell: dpkg -l | grep -q bind9
+  register: bind_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка bind (если отсутствует)
+  ansible.builtin.apt:
+    name: bind
+    state: present
+  when: ansible_os_family == "Debian" and bind_check.rc != 0
+
+- name: Проверка, установлен ли bind (RHEL)
+  shell: rpm -q bind
+  register: bind_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка bind (если отсутствует)
+  ansible.builtin.yum:
+    name: bind
+    state: present
+  when: ansible_os_family == "RedHat" and bind_check.rc != 0
+

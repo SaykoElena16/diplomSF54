@@ -16,3 +16,29 @@
     src: templates/grafana.conf.j2
     dest: /etc/grafana/grafana.conf
   notify: Перезапуск grafana
+
+# ✅ Проверка перед установкой grafana
+- name: Проверка, установлен ли grafana (Debian)
+  shell: dpkg -l | grep -q grafana
+  register: grafana_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка grafana (если отсутствует)
+  ansible.builtin.apt:
+    name: grafana
+    state: present
+  when: ansible_os_family == "Debian" and grafana_check.rc != 0
+
+- name: Проверка, установлен ли grafana (RHEL)
+  shell: rpm -q grafana
+  register: grafana_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка grafana (если отсутствует)
+  ansible.builtin.yum:
+    name: grafana
+    state: present
+  when: ansible_os_family == "RedHat" and grafana_check.rc != 0
+

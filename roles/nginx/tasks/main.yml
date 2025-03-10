@@ -16,3 +16,29 @@
     src: templates/nginx.conf.j2
     dest: /etc/nginx/nginx.conf
   notify: Перезапуск nginx
+
+# ✅ Проверка перед установкой nginx
+- name: Проверка, установлен ли nginx (Debian)
+  shell: dpkg -l | grep -q nginx
+  register: nginx_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка nginx (если отсутствует)
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+  when: ansible_os_family == "Debian" and nginx_check.rc != 0
+
+- name: Проверка, установлен ли nginx (RHEL)
+  shell: rpm -q nginx
+  register: nginx_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка nginx (если отсутствует)
+  ansible.builtin.yum:
+    name: nginx
+    state: present
+  when: ansible_os_family == "RedHat" and nginx_check.rc != 0
+

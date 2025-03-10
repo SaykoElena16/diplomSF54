@@ -16,3 +16,29 @@
     src: templates/apache.conf.j2
     dest: /etc/apache/apache.conf
   notify: Перезапуск apache
+
+# ✅ Проверка перед установкой apache
+- name: Проверка, установлен ли apache (Debian)
+  shell: dpkg -l | grep -q apache2
+  register: apache_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка apache (если отсутствует)
+  ansible.builtin.apt:
+    name: apache
+    state: present
+  when: ansible_os_family == "Debian" and apache_check.rc != 0
+
+- name: Проверка, установлен ли apache (RHEL)
+  shell: rpm -q apache
+  register: apache_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка apache (если отсутствует)
+  ansible.builtin.yum:
+    name: apache
+    state: present
+  when: ansible_os_family == "RedHat" and apache_check.rc != 0
+

@@ -16,3 +16,29 @@
     src: templates/php.conf.j2
     dest: /etc/php/php.conf
   notify: Перезапуск php
+
+# ✅ Проверка перед установкой php
+- name: Проверка, установлен ли php (Debian)
+  shell: dpkg -l | grep -q php
+  register: php_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка php (если отсутствует)
+  ansible.builtin.apt:
+    name: php
+    state: present
+  when: ansible_os_family == "Debian" and php_check.rc != 0
+
+- name: Проверка, установлен ли php (RHEL)
+  shell: rpm -q php
+  register: php_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка php (если отсутствует)
+  ansible.builtin.yum:
+    name: php
+    state: present
+  when: ansible_os_family == "RedHat" and php_check.rc != 0
+

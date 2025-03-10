@@ -16,3 +16,29 @@
     src: templates/mail.conf.j2
     dest: /etc/mail/mail.conf
   notify: Перезапуск mail
+
+# ✅ Проверка перед установкой mail
+- name: Проверка, установлен ли mail (Debian)
+  shell: dpkg -l | grep -q postfix
+  register: mail_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка mail (если отсутствует)
+  ansible.builtin.apt:
+    name: mail
+    state: present
+  when: ansible_os_family == "Debian" and mail_check.rc != 0
+
+- name: Проверка, установлен ли mail (RHEL)
+  shell: rpm -q mail
+  register: mail_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка mail (если отсутствует)
+  ansible.builtin.yum:
+    name: mail
+    state: present
+  when: ansible_os_family == "RedHat" and mail_check.rc != 0
+

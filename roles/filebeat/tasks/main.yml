@@ -16,3 +16,29 @@
     src: templates/filebeat.conf.j2
     dest: /etc/filebeat/filebeat.conf
   notify: Перезапуск filebeat
+
+# ✅ Проверка перед установкой filebeat
+- name: Проверка, установлен ли filebeat (Debian)
+  shell: dpkg -l | grep -q filebeat
+  register: filebeat_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка filebeat (если отсутствует)
+  ansible.builtin.apt:
+    name: filebeat
+    state: present
+  when: ansible_os_family == "Debian" and filebeat_check.rc != 0
+
+- name: Проверка, установлен ли filebeat (RHEL)
+  shell: rpm -q filebeat
+  register: filebeat_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Установка filebeat (если отсутствует)
+  ansible.builtin.yum:
+    name: filebeat
+    state: present
+  when: ansible_os_family == "RedHat" and filebeat_check.rc != 0
+
