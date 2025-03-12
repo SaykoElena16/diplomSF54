@@ -127,23 +127,7 @@ ansible-playbook -i inventory.ini roles/openvpn/tasks/add_client.yml
 ```bash
 ansible all -m user -a "name=mentor2 password=$(openssl passwd -1 sf54) shell=/bin/bash" --become
 ```
-(Пароль `sf54` — можно заменить)
-
----
-
-## 📌 Работа с GitHub
-Все изменения загружаются в репозиторий следующим образом:
-```bash
-git add .
-git commit -m "Updated playbooks and roles"
-git push origin main
-```
-
-Если репозиторий еще не привязан:
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/ansible-diploma.git
-git push -u origin main
-```
+(Пароль `sf54` )
 
 ---
 
