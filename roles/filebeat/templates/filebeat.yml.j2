@@ -1,0 +1,27 @@
+# Filebeat configuration file
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/*.log
+
+output.elasticsearch:
+  hosts: ["{{ elasticsearch_host | default('localhost:9200') }}"]
+
+setup.kibana:
+  host: "{{ kibana_host | default('localhost:5601') }}"
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+logging:
+  level: info
+  to_files: true
+  files:
+    path: /var/log/filebeat
+    name: filebeat
+    keepfiles: 7
+    permissions: 0644
+

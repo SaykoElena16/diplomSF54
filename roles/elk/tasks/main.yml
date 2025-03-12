@@ -1,44 +1,51 @@
 ---
-- name: Установка пакетов elk
-  ansible.builtin.apt:
-    name: elk
+# ✅ Копирование GPG-ключа Elastic (пропускаем в check-mode)
+- name: Копирование локального GPG-ключа Elastic
+  copy:
+    src: roles/elk/files/elastic-gpg.key
+    dest: /etc/pki/rpm-gpg/RPM-GPG-KEY-elasticsearch
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Добавление репозитория ELK (пропускаем в check-mode)
+- name: Добавление репозитория ELK (RHEL-based)
+  copy:
+    dest: /etc/yum.repos.d/elasticsearch.repo
+    content: |
+      [elasticsearch]
+      name=Elasticsearch repository for 8.x packages
+      baseurl=https://mirror.yandex.ru/mirrors/elastic/8.x/yum
+      gpgcheck=1
+      gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+      enabled=1
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Обновление кеша пакетов (пропускаем в check-mode)
+- name: Обновление кеша пакетов (RHEL-based)
+  command: dnf makecache
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Установка Elasticsearch, Logstash, Kibana (пропускаем в check-mode)
+- name: Установка ELK (RHEL-based)
+  ansible.builtin.dnf:
+    name:
+      - elasticsearch
+      - logstash
+      - kibana
     state: present
-  when: ansible_os_family == "Debian"
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
 
-- name: Установка пакетов elk (RHEL-based)
-  ansible.builtin.yum:
-    name: elk
-    state: present
-  when: ansible_os_family == "RedHat"
-
-- name: Конфигурирование elk
-  template:
-    src: templates/elk.conf.j2
-    dest: /etc/elk/elk.conf
-  notify: Перезапуск elk
-
-# ✅ Проверка перед установкой elk
-- name: Проверка, установлен ли elk (Debian)
-  shell: dpkg -l | grep -q elasticsearch
-  register: elk_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка elk (если отсутствует)
-  ansible.builtin.apt:
-    name: elk
-    state: present
-  when: ansible_os_family == "Debian" and elk_check.rc != 0
-
-- name: Проверка, установлен ли elk (RHEL)
-  shell: rpm -q elk
-  register: elk_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка elk (если отсутствует)
-  ansible.builtin.yum:
-    name: elk
-    state: present
-  when: ansible_os_family == "RedHat" and elk_check.rc != 0
+# ✅ Включение и запуск сервисов ELK (выполняется только при реальном запуске)
+- name: Запуск сервисов ELK
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - elasticsearch
+    - logstash
+    - kibana
+  when: not ansible_check_mode
 

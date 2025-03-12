@@ -1,6 +1,7 @@
+
 ---
-- name: Перезапуск zabbix_agent
+- name: Перезапуск Zabbix Agent
   ansible.builtin.service:
-    name: zabbix_agent
+    name: zabbix-agent
     state: restarted
-  when: .changed
+  become: true

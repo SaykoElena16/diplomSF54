@@ -1,0 +1,37 @@
+# Ansible specific files
+*.retry
+*.pyc
+__pycache__/
+
+# Ignore Ansible inventory files
+inventory
+host_vars/
+group_vars/
+
+# Ignore secrets and credentials
+*.vault
+*.secret
+secrets.yml
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp
+*.bak
+
+# Ignore SSH private keys
+*.pem
+*.pub
+
+# Ignore Python virtual environments
+venv/
+.env/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+

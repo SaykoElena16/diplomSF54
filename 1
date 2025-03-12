@@ -1,0 +1,54 @@
+---
+- name: Установка Apache (Debian)
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Установка Apache (RHEL-based)
+  ansible.builtin.yum:
+    name: httpd
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Проверка, установлен ли Apache (Debian)
+  command: dpkg-query -W apache2
+  register: apache_check_debian
+  changed_when: false
+  failed_when: apache_check_debian.rc is defined and apache_check_debian.rc not in [0, 1]
+  when: ansible_os_family == "Debian"
+
+- name: Вывод результата проверки Apache (Debian)
+  debug:
+    var: apache_check_debian
+
+- name: Проверка, установлен ли Apache (RHEL)
+  command: rpm -q httpd
+  register: apache_check_rhel
+  changed_when: false
+  failed_when: apache_check_rhel.rc is defined and apache_check_rhel.rc not in [0, 1]
+  when: ansible_os_family == "RedHat"
+
+- name: Вывод результата проверки Apache (RHEL)
+  debug:
+    var: apache_check_rhel
+
+- name: Создание директории для конфигов (если отсутствует)
+  file:
+    path: /etc/apache2/sites-available
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == "Debian"
+
+- name: Конфигурирование Apache
+  template:
+    src: apache.conf.j2
+    dest: "{{ '/etc/apache2/apache2.conf' if ansible_os_family == 'Debian' else '/etc/httpd/conf/httpd.conf' }}"
+  notify: Перезапуск Apache
+
+- name: Включение и запуск Apache
+  systemd:
+    name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+    enabled: yes
+    state: started
+

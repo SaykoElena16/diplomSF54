@@ -1,6 +1,8 @@
 ---
 - name: Перезапуск filebeat
-  ansible.builtin.service:
+  systemd:
     name: filebeat
     state: restarted
-  when: .changed
+    enabled: yes
+  when: restart_filebeat is defined and restart_filebeat.changed
+

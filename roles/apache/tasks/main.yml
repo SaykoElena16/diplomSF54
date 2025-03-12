@@ -1,44 +1,64 @@
 ---
-- name: Установка пакетов apache
+- name: Установка Apache (Debian)
   ansible.builtin.apt:
-    name: apache
+    name: apache2
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов apache (RHEL-based)
+- name: Установка Apache (RHEL-based)
   ansible.builtin.yum:
-    name: apache
+    name: httpd
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование apache
+- name: Проверка, установлен ли Apache (Debian)
+  command: dpkg-query -W apache2
+  register: apache_check_debian
+  changed_when: false
+  failed_when: apache_check_debian.rc is defined and apache_check_debian.rc not in [0, 1]
+  when: ansible_os_family == "Debian"
+
+- name: Вывод результата проверки Apache (Debian)
+  debug:
+    var: apache_check_debian
+
+- name: Проверка, установлен ли Apache (RHEL)
+  command: rpm -q httpd
+  register: apache_check_rhel
+  changed_when: false
+  failed_when: apache_check_rhel.rc is defined and apache_check_rhel.rc not in [0, 1]
+  when: ansible_os_family == "RedHat"
+
+- name: Вывод результата проверки Apache (RHEL)
+  debug:
+    var: apache_check_rhel
+
+- name: Создание директории для конфигов (если отсутствует) (Debian)
+  file:
+    path: /etc/apache2/sites-available
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == "Debian"
+
+- name: Конфигурирование Apache
   template:
-    src: templates/apache.conf.j2
-    dest: /etc/apache/apache.conf
-  notify: Перезапуск apache
+    src: apache.conf.j2
+    dest: "{{ '/etc/apache2/apache2.conf' if ansible_os_family == 'Debian' else '/etc/httpd/conf/httpd.conf' }}"
+  notify: Перезапуск Apache
 
-# ✅ Проверка перед установкой apache
-- name: Проверка, установлен ли apache (Debian)
-  shell: dpkg -l | grep -q apache2
-  register: apache_check
-  ignore_errors: yes
-  changed_when: false
+- name: Включение модуля rewrite (Debian)
+  command: a2enmod rewrite
+  when: ansible_os_family == "Debian"
+  notify: Перезапуск Apache
 
-- name: Установка apache (если отсутствует)
-  ansible.builtin.apt:
-    name: apache
-    state: present
-  when: ansible_os_family == "Debian" and apache_check.rc != 0
+- name: Включение виртуального хоста (Debian)
+  command: a2ensite 000-default
+  when: ansible_os_family == "Debian"
+  notify: Перезапуск Apache
 
-- name: Проверка, установлен ли apache (RHEL)
-  shell: rpm -q apache
-  register: apache_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка apache (если отсутствует)
-  ansible.builtin.yum:
-    name: apache
-    state: present
-  when: ansible_os_family == "RedHat" and apache_check.rc != 0
+- name: Включение и запуск Apache
+  systemd:
+    name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+    enabled: yes
+    state: started
 

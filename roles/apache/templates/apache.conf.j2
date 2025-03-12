@@ -1,0 +1,21 @@
+# Apache configuration
+
+ServerRoot "{{ '/etc/apache2' if ansible_os_family == 'Debian' else '/etc/httpd' }}"
+Listen 80
+
+<Directory />
+    Options FollowSymLinks
+    AllowOverride None
+    Require all denied
+</Directory>
+
+DocumentRoot "/var/www/html"
+<Directory "/var/www/html">
+    Options Indexes FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+
+ErrorLog ${APACHE_LOG_DIR}/error.log
+CustomLog ${APACHE_LOG_DIR}/access.log combined
+

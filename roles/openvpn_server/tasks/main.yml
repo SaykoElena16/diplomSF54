@@ -1,18 +1,31 @@
 ---
-- name: Установка OpenVPN для openvpn_server
+- name: Установка OpenVPN (Debian)
   ansible.builtin.apt:
     name: openvpn
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка OpenVPN для openvpn_server (RHEL-based)
+- name: Установка OpenVPN (RHEL)
   ansible.builtin.yum:
     name: openvpn
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Копирование конфигурации OpenVPN
+- name: Создание каталога конфигурации OpenVPN
+  file:
+    path: /etc/openvpn
+    state: directory
+    mode: "0755"
+
+- name: Копирование конфигурации OpenVPN-сервера
   template:
-    src: openvpn_server.conf.j2
-    dest: /etc/openvpn/openvpn_server.conf
+    src: server.conf.j2
+    dest: /etc/openvpn/server.conf
   notify: Перезапуск OpenVPN
+
+- name: Включение и запуск OpenVPN-сервера
+  systemd:
+    name: openvpn
+    enabled: yes
+    state: started
+

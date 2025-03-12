@@ -1,6 +1,19 @@
 ---
-- name: Перезапуск mail
-  ansible.builtin.service:
-    name: mail
+- name: Перезапуск Postfix
+  systemd:
+    name: postfix
     state: restarted
-  when: .changed
+    enabled: yes
+
+- name: Перезапуск Dovecot
+  systemd:
+    name: dovecot
+    state: restarted
+    enabled: yes
+
+- name: Перезапуск Roundcube
+  systemd:
+    name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+    state: restarted
+    enabled: yes
+

@@ -1,6 +1,7 @@
 ---
-- name: Перезапуск php
-  ansible.builtin.service:
-    name: php
+- name: Перезапуск PHP
+  systemd:
+    name: "{{ 'php7.4-fpm' if ansible_os_family == 'Debian' else 'php-fpm' }}"
     state: restarted
-  when: .changed
+    enabled: yes
+

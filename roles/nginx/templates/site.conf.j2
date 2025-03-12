@@ -1,0 +1,15 @@
+server {
+    listen 80;
+    server_name {{ ansible_fqdn }};
+
+    root /var/www/{{ ansible_fqdn }};
+    index index.html index.htm index.php;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    error_log /var/log/nginx/{{ ansible_fqdn }}_error.log;
+    access_log /var/log/nginx/{{ ansible_fqdn }}_access.log;
+}
+

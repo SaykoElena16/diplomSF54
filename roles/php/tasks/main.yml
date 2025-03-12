@@ -1,44 +1,63 @@
 ---
-- name: Установка пакетов php
-  ansible.builtin.apt:
-    name: php
+- name: Установка PHP (Debian)
+  apt:
+    name:
+      - php
+      - php-fpm
+      - php-cli
+      - php-mysql
+      - php-curl
+      - php-gd
+      - php-xml
+      - php-mbstring
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов php (RHEL-based)
-  ansible.builtin.yum:
-    name: php
+- name: Установка PHP (RHEL-based)
+  yum:
+    name:
+      - php
+      - php-fpm
+      - php-cli
+      - php-mysql
+      - php-curl
+      - php-gd
+      - php-xml
+      - php-mbstring
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование php
+- name: Проверка, установлен ли PHP (Debian)
+  command: dpkg-query -W php
+  register: php_check_debian
+  changed_when: false
+  failed_when: php_check_debian.rc is defined and php_check_debian.rc not in [0, 1]
+  when: ansible_os_family == "Debian"
+
+- name: Вывод результата проверки PHP (Debian)
+  debug:
+    var: php_check_debian
+
+- name: Проверка, установлен ли PHP (RHEL)
+  command: rpm -q php
+  register: php_check_rhel
+  changed_when: false
+  failed_when: php_check_rhel.rc is defined and php_check_rhel.rc not in [0, 1]
+  when: ansible_os_family == "RedHat"
+
+- name: Вывод результата проверки PHP (RHEL)
+  debug:
+    var: php_check_rhel
+
+- name: Конфигурирование PHP
   template:
-    src: templates/php.conf.j2
-    dest: /etc/php/php.conf
-  notify: Перезапуск php
+    src: php.conf.j2
+    dest: "{{ '/etc/php/7.4/fpm/php-fpm.conf' if ansible_os_family == 'Debian' else '/etc/php-fpm.conf' }}"
+  notify: Перезапуск PHP
 
-# ✅ Проверка перед установкой php
-- name: Проверка, установлен ли php (Debian)
-  shell: dpkg -l | grep -q php
-  register: php_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка php (если отсутствует)
-  ansible.builtin.apt:
-    name: php
-    state: present
-  when: ansible_os_family == "Debian" and php_check.rc != 0
-
-- name: Проверка, установлен ли php (RHEL)
-  shell: rpm -q php
-  register: php_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка php (если отсутствует)
-  ansible.builtin.yum:
-    name: php
-    state: present
-  when: ansible_os_family == "RedHat" and php_check.rc != 0
+- name: Включение и запуск PHP-FPM
+  systemd:
+    name: "{{ 'php7.4-fpm' if ansible_os_family == 'Debian' else 'php-fpm' }}"
+    enabled: yes
+    state: started
 

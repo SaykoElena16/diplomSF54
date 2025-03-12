@@ -30,4 +30,3 @@
     - elk
     - openvpn_client  # Подключение к VPN
   tags: database
-

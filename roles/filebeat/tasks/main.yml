@@ -1,44 +1,74 @@
 ---
-- name: Установка пакетов filebeat
-  ansible.builtin.apt:
+- name: Проверка установлен ли Filebeat (Debian)
+  command: dpkg-query -W filebeat
+  register: filebeat_check_debian
+  changed_when: false
+  failed_when: filebeat_check_debian.rc is defined and filebeat_check_debian.rc not in [0, 1]
+  when: ansible_os_family == "Debian"
+
+- name: Вывод результата проверки Filebeat (Debian)
+  debug:
+    var: filebeat_check_debian
+
+- name: Добавление репозитория Elastic (Debian)
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/elastic-archive-keyring.gpg] https://artifacts.elastic.co/packages/7.x/apt stable main"
+    state: present
+    filename: elastic
+  when: ansible_os_family == "Debian"
+
+- name: Обновление кеша пакетов (Debian)
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Установка Filebeat (Debian)
+  apt:
     name: filebeat
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов filebeat (RHEL-based)
-  ansible.builtin.yum:
+- name: Проверка установлен ли Filebeat (RHEL)
+  command: rpm -q filebeat
+  register: filebeat_check_rhel
+  changed_when: false
+  failed_when: filebeat_check_rhel.rc is defined and filebeat_check_rhel.rc not in [0, 1]
+  when: ansible_os_family == "RedHat"
+
+- name: Вывод результата проверки Filebeat (RHEL)
+  debug:
+    var: filebeat_check_rhel
+
+- name: Добавление репозитория Elastic (RHEL)
+  yum_repository:
+    name: elastic
+    description: Elastic repository for Filebeat
+    baseurl: https://artifacts.elastic.co/packages/7.x/yum
+    gpgcheck: yes
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    enabled: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Установка Filebeat (RHEL)
+  yum:
     name: filebeat
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование filebeat
+- name: Конфигурирование Filebeat
   template:
-    src: templates/filebeat.conf.j2
-    dest: /etc/filebeat/filebeat.conf
+    src: templates/filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+    owner: root
+    group: root
+    mode: '0644'
+  register: restart_filebeat
   notify: Перезапуск filebeat
 
-# ✅ Проверка перед установкой filebeat
-- name: Проверка, установлен ли filebeat (Debian)
-  shell: dpkg -l | grep -q filebeat
-  register: filebeat_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка filebeat (если отсутствует)
-  ansible.builtin.apt:
+- name: Включение и запуск Filebeat
+  systemd:
     name: filebeat
-    state: present
-  when: ansible_os_family == "Debian" and filebeat_check.rc != 0
-
-- name: Проверка, установлен ли filebeat (RHEL)
-  shell: rpm -q filebeat
-  register: filebeat_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка filebeat (если отсутствует)
-  ansible.builtin.yum:
-    name: filebeat
-    state: present
-  when: ansible_os_family == "RedHat" and filebeat_check.rc != 0
+    enabled: yes
+    state: started
+  when: ansible_os_family in ["Debian", "RedHat"]
 

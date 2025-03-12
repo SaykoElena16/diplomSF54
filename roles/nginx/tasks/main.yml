@@ -1,44 +1,72 @@
 ---
-- name: Установка пакетов nginx
-  ansible.builtin.apt:
+- name: Установка nginx (Debian)
+  apt:
     name: nginx
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов nginx (RHEL-based)
-  ansible.builtin.yum:
+- name: Установка nginx (RHEL-based)
+  yum:
     name: nginx
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование nginx
+- name: Создание директории для сайтов (если отсутствует)
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Создание директории для включенных сайтов (если отсутствует)
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Конфигурирование nginx (основной конфиг)
   template:
-    src: templates/nginx.conf.j2
+    src: nginx.conf.j2
     dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
   notify: Перезапуск nginx
 
-# ✅ Проверка перед установкой nginx
-- name: Проверка, установлен ли nginx (Debian)
-  shell: dpkg -l | grep -q nginx
-  register: nginx_check
-  ignore_errors: yes
+- name: Конфигурирование сайта (виртуальный хост)
+  template:
+    src: site.conf.j2
+    dest: /etc/nginx/sites-available/{{ inventory_hostname }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Перезапуск nginx
+
+- name: Включение виртуального хоста
+  file:
+    src: /etc/nginx/sites-available/{{ inventory_hostname }}.conf
+    dest: /etc/nginx/sites-enabled/{{ inventory_hostname }}.conf
+    state: link
+  notify: Перезапуск nginx
+  when: not ansible_check_mode  # Избегает ошибок в `--check`
+
+- name: Проверка синтаксиса nginx перед перезапуском
+  command: nginx -t
+  register: nginx_syntax_check
   changed_when: false
+  failed_when: "'syntax is ok' not in nginx_syntax_check.stdout or 'test is successful' not in nginx_syntax_check.stdout"
 
-- name: Установка nginx (если отсутствует)
-  ansible.builtin.apt:
+- name: Вывод результата проверки синтаксиса
+  debug:
+    var: nginx_syntax_check
+
+- name: Перезапуск nginx, если конфигурация изменилась
+  systemd:
     name: nginx
-    state: present
-  when: ansible_os_family == "Debian" and nginx_check.rc != 0
-
-- name: Проверка, установлен ли nginx (RHEL)
-  shell: rpm -q nginx
-  register: nginx_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка nginx (если отсутствует)
-  ansible.builtin.yum:
-    name: nginx
-    state: present
-  when: ansible_os_family == "RedHat" and nginx_check.rc != 0
+    state: restarted
+    enabled: yes
+  when: nginx_syntax_check is defined and nginx_syntax_check.rc is defined and nginx_syntax_check.rc == 0
 

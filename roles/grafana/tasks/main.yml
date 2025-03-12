@@ -1,44 +1,45 @@
 ---
-- name: Установка пакетов grafana
-  ansible.builtin.apt:
-    name: grafana
-    state: present
-  when: ansible_os_family == "Debian"
+# ✅ Копирование GPG-ключа Grafana (если онлайн-загрузка недоступна)
+- name: Копирование локального GPG-ключа Grafana
+  copy:
+    src: roles/grafana/files/grafana-gpg.key
+    dest: /etc/pki/rpm-gpg/RPM-GPG-KEY-grafana
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
 
-- name: Установка пакетов grafana (RHEL-based)
-  ansible.builtin.yum:
+# ✅ Добавление репозитория Grafana (используем Yandex-зеркало)
+- name: Добавление репозитория Grafana (RHEL-based)
+  copy:
+    dest: /etc/yum.repos.d/grafana.repo
+    content: |
+      [grafana]
+      name=Grafana Repository
+      baseurl=https://mirror.yandex.ru/mirrors/grafana/yum
+      enabled=1
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-grafana
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Очистка кеша пакетов (не выполняется в check-mode)
+- name: Обновление кеша пакетов
+  command: dnf makecache
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Установка Grafana (пропускаем в check-mode)
+- name: Установка Grafana (RHEL-based)
+  ansible.builtin.dnf:
     name: grafana
     state: present
+  when: ansible_os_family == "RedHat" and not ansible_check_mode
+
+# ✅ Включение и запуск сервиса Grafana (работает всегда)
+- name: Включение и запуск сервиса Grafana
+  systemd:
+    name: grafana-server
+    enabled: yes
+    state: started
   when: ansible_os_family == "RedHat"
-
-- name: Конфигурирование grafana
-  template:
-    src: templates/grafana.conf.j2
-    dest: /etc/grafana/grafana.conf
-  notify: Перезапуск grafana
-
-# ✅ Проверка перед установкой grafana
-- name: Проверка, установлен ли grafana (Debian)
-  shell: dpkg -l | grep -q grafana
-  register: grafana_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка grafana (если отсутствует)
-  ansible.builtin.apt:
-    name: grafana
-    state: present
-  when: ansible_os_family == "Debian" and grafana_check.rc != 0
-
-- name: Проверка, установлен ли grafana (RHEL)
-  shell: rpm -q grafana
-  register: grafana_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка grafana (если отсутствует)
-  ansible.builtin.yum:
-    name: grafana
-    state: present
-  when: ansible_os_family == "RedHat" and grafana_check.rc != 0
 

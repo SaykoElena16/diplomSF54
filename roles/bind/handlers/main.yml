@@ -1,6 +1,7 @@
 ---
-- name: Перезапуск bind
-  ansible.builtin.service:
-    name: bind
+- name: Перезапуск BIND
+  systemd:
+    name: "{{ 'bind9' if ansible_os_family == 'Debian' else 'named' }}"
     state: restarted
-  when: .changed
+    enabled: yes
+

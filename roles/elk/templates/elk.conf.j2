@@ -1,0 +1,20 @@
+# ELK Configuration
+input {
+  beats {
+    port => 5044
+  }
+}
+
+filter {
+  grok {
+    match => { "message" => "%{COMBINEDAPACHELOG}" }
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["{{ elk_host }}"]
+    index => "logs-%{+YYYY.MM.dd}"
+  }
+  stdout { codec => rubydebug }
+}

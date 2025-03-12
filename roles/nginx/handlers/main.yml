@@ -1,6 +1,7 @@
 ---
 - name: Перезапуск nginx
-  ansible.builtin.service:
+  systemd:
     name: nginx
     state: restarted
-  when: .changed
+    enabled: yes
+

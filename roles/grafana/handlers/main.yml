@@ -1,6 +1,9 @@
+
 ---
 - name: Перезапуск grafana
-  ansible.builtin.service:
-    name: grafana
+  ansible.builtin.systemd:
+    name: grafana-server
     state: restarted
-  when: .changed
+    enabled: true
+  become: true
+

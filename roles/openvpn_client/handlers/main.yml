@@ -1,6 +1,7 @@
 ---
 - name: Перезапуск OpenVPN
-  ansible.builtin.service:
+  systemd:
     name: openvpn
     state: restarted
-  when: openvpn_config.changed
+    enabled: yes
+

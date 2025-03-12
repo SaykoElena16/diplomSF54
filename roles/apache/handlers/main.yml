@@ -1,6 +1,7 @@
 ---
-- name: Перезапуск apache
-  ansible.builtin.service:
-    name: apache
+- name: Перезапуск Apache
+  systemd:
+    name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
     state: restarted
-  when: .changed
+    enabled: yes
+

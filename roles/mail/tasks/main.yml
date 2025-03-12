@@ -1,44 +1,148 @@
 ---
-- name: Установка пакетов mail
-  ansible.builtin.apt:
-    name: mail
-    state: present
+# 1️⃣ Проверка установлен ли Postfix
+- name: Проверка, установлен ли Postfix (Debian)
+  command: dpkg-query -W postfix
+  register: postfix_check_debian
+  changed_when: false
+  failed_when: false
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов mail (RHEL-based)
-  ansible.builtin.yum:
-    name: mail
-    state: present
+- name: Проверка, установлен ли Postfix (RHEL)
+  command: rpm -q postfix
+  register: postfix_check_rhel
+  changed_when: false
+  failed_when: false
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование mail
+- name: Вывод результата проверки Postfix (Debian)
+  debug:
+    var: postfix_check_debian.stdout_lines
+  when: ansible_os_family == "Debian"
+
+- name: Установка Postfix (Debian)
+  apt:
+    name: postfix
+    state: present
+  when:
+    - ansible_os_family == "Debian"
+    - postfix_check_debian is defined
+    - postfix_check_debian.stdout is defined
+    - "'postfix' not in postfix_check_debian.stdout | default('')"
+
+- name: Установка Postfix (RHEL)
+  yum:
+    name: postfix
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - postfix_check_rhel is defined
+    - postfix_check_rhel.stdout is defined
+    - "'postfix' not in postfix_check_rhel.stdout | default('')"
+
+- name: Конфигурирование Postfix
   template:
-    src: templates/mail.conf.j2
-    dest: /etc/mail/mail.conf
-  notify: Перезапуск mail
+    src: postfix/main.cf.j2
+    dest: /etc/postfix/main.cf
+  notify: Перезапуск Postfix
 
-# ✅ Проверка перед установкой mail
-- name: Проверка, установлен ли mail (Debian)
-  shell: dpkg -l | grep -q postfix
-  register: mail_check
-  ignore_errors: yes
+# 2️⃣ Проверка установлен ли Dovecot
+- name: Проверка, установлен ли Dovecot (Debian)
+  command: dpkg-query -W dovecot-core
+  register: dovecot_check_debian
   changed_when: false
+  failed_when: false
+  when: ansible_os_family == "Debian"
 
-- name: Установка mail (если отсутствует)
-  ansible.builtin.apt:
-    name: mail
-    state: present
-  when: ansible_os_family == "Debian" and mail_check.rc != 0
-
-- name: Проверка, установлен ли mail (RHEL)
-  shell: rpm -q mail
-  register: mail_check
-  ignore_errors: yes
+- name: Проверка, установлен ли Dovecot (RHEL)
+  command: rpm -q dovecot
+  register: dovecot_check_rhel
   changed_when: false
+  failed_when: false
+  when: ansible_os_family == "RedHat"
 
-- name: Установка mail (если отсутствует)
-  ansible.builtin.yum:
-    name: mail
+- name: Установка Dovecot (Debian)
+  apt:
+    name: dovecot-core
     state: present
-  when: ansible_os_family == "RedHat" and mail_check.rc != 0
+  when:
+    - ansible_os_family == "Debian"
+    - dovecot_check_debian is defined
+    - dovecot_check_debian.stdout is defined
+    - "'dovecot' not in dovecot_check_debian.stdout | default('')"
+
+- name: Установка Dovecot (RHEL)
+  yum:
+    name: dovecot
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - dovecot_check_rhel is defined
+    - dovecot_check_rhel.stdout is defined
+    - "'dovecot' not in dovecot_check_rhel.stdout | default('')"
+
+- name: Конфигурирование Dovecot
+  template:
+    src: dovecot/dovecot.conf.j2
+    dest: /etc/dovecot/dovecot.conf
+  notify: Перезапуск Dovecot
+
+# 3️⃣ Проверка установлен ли Roundcube
+- name: Проверка, установлен ли Roundcube (Debian)
+  command: dpkg-query -W roundcube
+  register: roundcube_check_debian
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "Debian"
+
+- name: Проверка, установлен ли Roundcube (RHEL)
+  command: rpm -q roundcubemail
+  register: roundcube_check_rhel
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "RedHat"
+
+- name: Установка Roundcube (Debian)
+  apt:
+    name: roundcube
+    state: present
+  when:
+    - ansible_os_family == "Debian"
+    - roundcube_check_debian is defined
+    - roundcube_check_debian.stdout is defined
+    - "'roundcube' not in roundcube_check_debian.stdout | default('')"
+
+- name: Установка Roundcube (RHEL)
+  yum:
+    name: roundcubemail
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - roundcube_check_rhel is defined
+    - roundcube_check_rhel.stdout is defined
+    - "'roundcube' not in roundcube_check_rhel.stdout | default('')"
+
+- name: Конфигурирование Roundcube
+  template:
+    src: roundcube/config.inc.php.j2
+    dest: /etc/roundcube/config.inc.php
+  notify: Перезапуск Roundcube
+
+# 4️⃣ Включение и запуск всех сервисов
+- name: Включение и запуск Postfix
+  systemd:
+    name: postfix
+    enabled: yes
+    state: started
+
+- name: Включение и запуск Dovecot
+  systemd:
+    name: dovecot
+    enabled: yes
+    state: started
+
+- name: Включение и запуск Roundcube
+  systemd:
+    name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+    enabled: yes
+    state: started
 

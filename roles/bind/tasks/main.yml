@@ -1,44 +1,47 @@
 ---
-- name: Установка пакетов bind
-  ansible.builtin.apt:
-    name: bind
+- name: Установка пакетов BIND (Debian)
+  apt:
+    name: bind9
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов bind (RHEL-based)
-  ansible.builtin.yum:
+- name: Установка пакетов BIND (RHEL-based)
+  yum:
     name: bind
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Конфигурирование bind
+- name: Проверка, установлен ли BIND (Debian)
+  command: dpkg-query -W bind9
+  register: bind_check_debian
+  changed_when: false
+  failed_when: bind_check_debian.rc is defined and bind_check_debian.rc not in [0, 1]
+  when: ansible_os_family == "Debian"
+
+- name: Вывод результата проверки BIND (Debian)
+  debug:
+    var: bind_check_debian
+
+- name: Проверка, установлен ли BIND (RHEL)
+  command: rpm -q bind
+  register: bind_check_rhel
+  changed_when: false
+  failed_when: bind_check_rhel.rc is defined and bind_check_rhel.rc not in [0, 1]
+  when: ansible_os_family == "RedHat"
+
+- name: Вывод результата проверки BIND (RHEL)
+  debug:
+    var: bind_check_rhel
+
+- name: Конфигурирование BIND
   template:
-    src: templates/bind.conf.j2
-    dest: /etc/bind/bind.conf
-  notify: Перезапуск bind
+    src: bind.conf.j2
+    dest: "{{ '/etc/bind/named.conf.options' if ansible_os_family == 'Debian' else '/etc/named.conf' }}"
+  notify: Перезапуск BIND
 
-# ✅ Проверка перед установкой bind
-- name: Проверка, установлен ли bind (Debian)
-  shell: dpkg -l | grep -q bind9
-  register: bind_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка bind (если отсутствует)
-  ansible.builtin.apt:
-    name: bind
-    state: present
-  when: ansible_os_family == "Debian" and bind_check.rc != 0
-
-- name: Проверка, установлен ли bind (RHEL)
-  shell: rpm -q bind
-  register: bind_check
-  ignore_errors: yes
-  changed_when: false
-
-- name: Установка bind (если отсутствует)
-  ansible.builtin.yum:
-    name: bind
-    state: present
-  when: ansible_os_family == "RedHat" and bind_check.rc != 0
+- name: Включение и запуск BIND
+  systemd:
+    name: "{{ 'bind9' if ansible_os_family == 'Debian' else 'named' }}"
+    enabled: yes
+    state: started
 

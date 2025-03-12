@@ -1,18 +1,31 @@
 ---
-- name: Установка пакетов postgresql_server
-  ansible.builtin.apt:
-    name: postgresql_server
+- name: Установка PostgreSQL (Ubuntu)
+  apt:
+    name:
+      - postgresql-12
+      - postgresql-client-12
     state: present
+    update_cache: yes
   when: ansible_os_family == "Debian"
 
-- name: Установка пакетов postgresql_server (RHEL-based)
-  ansible.builtin.yum:
-    name: postgresql_server
+- name: Установка PostgreSQL (Fedora)
+  dnf:
+    name:
+      - postgresql-server
+      - postgresql
     state: present
-  when: ansible_os_family == "RedHat"
+    update_cache: yes
+  when: ansible_distribution == "Fedora"
 
-- name: Конфигурирование postgresql_server
-  template:
-    src: templates/postgresql_server.conf.j2
-    dest: /etc/postgresql_server/postgresql_server.conf
-  notify: Перезапуск postgresql_server
+- name: Инициализация базы данных PostgreSQL (Fedora)
+  command: postgresql-setup --initdb
+  args:
+    creates: /var/lib/pgsql/data/PG_VERSION
+  when: ansible_distribution == "Fedora"
+
+- name: Включение и запуск PostgreSQL
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
