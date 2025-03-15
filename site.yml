@@ -1,6 +1,7 @@
 ---
 - name: Установка сервисов на сервер мониторинга (Server 1)
   hosts: monitoring_servers
+  gather_facts: yes
   roles:
     - zabbix_server
     - zabbix_agent
@@ -11,6 +12,7 @@
 
 - name: Установка сервисов на веб-сервер (Server 2)
   hosts: web_servers
+  gather_facts: yes
   roles:
     - nginx
     - apache
@@ -19,14 +21,24 @@
     - filebeat
     - bind
     - mail
-    - openvpn_client  # Подключение к VPN
+    - openvpn_client  # OpenVPN клиент
   tags: web
 
 - name: Установка сервисов на сервер базы данных (Server 3)
   hosts: db_servers
+  gather_facts: yes
   roles:
     - postgresql_server  # PostgreSQL 12
     - zabbix_agent
     - elk
-    - openvpn_client  # Подключение к VPN
+    - openvpn_client  # OpenVPN клиент
   tags: database
+
+# ✅ Добавляем новый блок для OpenVPN-клиентов на корректном уровне:
+- name: Установка OpenVPN-клиента
+  hosts: openvpn_clients
+  gather_facts: yes
+  roles:
+    - openvpn_client
+  tags: openvpn_client
+

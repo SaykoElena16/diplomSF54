@@ -1,18 +1,53 @@
-port 1194
-proto tcp
-dev tun
-ca /etc/openvpn/ca.crt
-cert /etc/openvpn/server.crt
-key /etc/openvpn/server.key
-dh /etc/openvpn/dh.pem
-server 10.8.0.0 255.255.255.0
-ifconfig-pool-persist ipp.txt
-keepalive 10 120
-tls-auth /etc/openvpn/ta.key 0
-cipher AES-256-CBC
-persist-key
-persist-tun
-status /var/log/openvpn-status.log
-log /var/log/openvpn.log
-verb 3
+proto tcp                # Использование TCP для соединения
+port 1194                 # Порт для работы OpenVPN
+
+dev tun                  # Виртуальный сетевой интерфейс TUN
+
+# Пути к сертификатам и ключам
+ca /etc/openvpn/server/ca.crt                # Файл сертификата CA
+cert /etc/openvpn/server/server.crt          # Сертификат сервера
+key /etc/openvpn/server/server.key           # Приватный ключ сервера
+dh /etc/openvpn/server/dh.pem                # Параметры Диффи-Хеллмана
+
+# Настройка IP-пула для клиентов
+server 10.9.0.0 255.255.255.0                # Диапазон IP-адресов, которые сервер будет выдавать клиентам
+
+# Безопасность
+tls-auth /etc/openvpn/server/ta.key 0        # Аутентификация TLS с использованием ta.key (сервер - 0)
+tls-server                                   # Указывает, что сервер работает в режиме TLS
+cipher AES-256-CBC                           # Шифрование AES-256-CBC
+auth SHA256                                  # Аутентификация SHA256
+tls-version-min 1.2                          # Минимальная версия TLS 1.2
+
+# Оптимизация работы
+persist-key                                  # Сохранение ключей при перезапуске
+persist-tun                                  # Сохранение туннеля при перезапуске
+
+# Логи и статус
+status /var/log/openvpn/status.log           # Лог файл статуса
+log-append /var/log/openvpn/openvpn.log      # Лог файл OpenVPN
+verb 3                                       # Уровень логирования (3 - базовый)
+
+# Параметры keepalive для стабильности соединения
+keepalive 10 120                             # Ping каждые 10 секунд, перезапуск через 120 секунд без ответа
+
+# Маршрутизация и DNS
+#push "redirect-gateway def1 bypass-dhcp"     # Перенаправление всего трафика через VPN
+push "dhcp-option DNS 8.8.8.8"               # Использовать DNS Google
+push "dhcp-option DNS 8.8.4.4"
+push "route 192.168.0.0 255.255.255.0"        # Пример маршрута для локальной сети
+
+# Настройки MTU
+tun-mtu 1500                                 # Размер MTU
+mssfix 1450                                  # MSS fix для поддержки MTU (включено для предотвращения проблем с фрагментацией)
+
+# Дополнительные параметры
+push "route-gateway 10.9.0.1"                # Указание шлюза по умолчанию для клиентов
+topology subnet                              # Улучшение совместимости с сетями
+auth-nocache                                 # Запрет кэширования паролей
+#compress lz4                                # Включение сжатия данных (опционально)
+replay-window 128 30
+tcp-queue-limit 64
+sndbuf 0
+rcvbuf 0
 

@@ -46,7 +46,7 @@
 server-1 ansible_host=51.250.27.167 ansible_user=lena ansible_become=True
 
 [web_servers]
-port-443.ru ansible_host=185.198.152.26 ansible_user=root
+web-server ansible_host=185.198.152.26 ansible_user=root ansible_become=True
 
 [db_servers]
 server-3 ansible_host=158.160.73.147 ansible_user=lena ansible_become=True

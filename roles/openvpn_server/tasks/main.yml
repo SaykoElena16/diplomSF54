@@ -1,31 +1,60 @@
 ---
+- name: Проверяем, какая ОС используется
+  debug:
+    msg: "ОС на сервере: {{ ansible_os_family }}"
+
 - name: Установка OpenVPN (Debian)
   ansible.builtin.apt:
     name: openvpn
     state: present
-  when: ansible_os_family == "Debian"
+  when: ansible_os_family | lower == "debian"
+  become: yes
 
-- name: Установка OpenVPN (RHEL)
+- name: Установка OpenVPN (RHEL/Fedora)
   ansible.builtin.yum:
     name: openvpn
     state: present
-  when: ansible_os_family == "RedHat"
+  when: ansible_os_family | lower == "redhat"
+  become: yes
 
 - name: Создание каталога конфигурации OpenVPN
-  file:
-    path: /etc/openvpn
+  ansible.builtin.file:
+    path: /etc/openvpn/server
     state: directory
+    owner: root
+    group: root
     mode: "0755"
+  become: yes
 
 - name: Копирование конфигурации OpenVPN-сервера
-  template:
+  ansible.builtin.template:
     src: server.conf.j2
-    dest: /etc/openvpn/server.conf
+    dest: /etc/openvpn/server/server.conf
+    owner: root
+    group: root
+    mode: "0644"
   notify: Перезапуск OpenVPN
+  become: yes
+
+- name: Копирование ключей и сертификатов
+  ansible.builtin.copy:
+    src: "/etc/openvpn/server/{{ item.src }}"
+    dest: "/etc/openvpn/server/{{ item.dest }}"
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0600"
+  with_items:
+    - { src: "ca.crt", dest: "ca.crt" }
+    - { src: "server.crt", dest: "server.crt" }
+    - { src: "server.key", dest: "server.key" }
+    - { src: "dh.pem", dest: "dh.pem" }
+    - { src: "ta.key", dest: "ta.key" }
+  become: yes
 
 - name: Включение и запуск OpenVPN-сервера
-  systemd:
-    name: openvpn
+  ansible.builtin.systemd:
+    name: openvpn-server@server
     enabled: yes
     state: started
-
+  become: yes

@@ -127,7 +127,7 @@ ansible-playbook -i inventory.ini roles/openvpn/tasks/add_client.yml
 ```bash
 ansible all -m user -a "name=mentor2 password=$(openssl passwd -1 sf54) shell=/bin/bash" --become
 ```
-(Пароль `sf54` )
+
 
 ---
 

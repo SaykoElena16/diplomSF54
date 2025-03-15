@@ -1,0 +1,31 @@
+client
+dev tun
+proto tcp                          # Используем TCP
+remote 51.250.27.167 1194          # IP сервера и порт
+
+resolv-retry infinite
+nobind
+
+persist-key
+persist-tun
+
+# Пути к сертификатам
+ca /etc/openvpn/client/ca.crt
+cert /etc/openvpn/client/client2.crt
+key /etc/openvpn/client/client2.key
+
+cipher AES-256-CBC
+auth SHA256
+tls-client
+tls-auth /etc/openvpn/client/ta.key 1  # Клиентский ключ TLS
+
+remote-cert-tls server
+
+verb 3
+auth-nocache
+
+# Маршрутизация
+tun-mtu 1500
+mssfix 1450
+route-method exe
+route-delay 2

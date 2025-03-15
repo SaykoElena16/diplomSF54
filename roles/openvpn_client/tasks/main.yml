@@ -1,43 +1,79 @@
 ---
-- name: Установка пакетов OpenVPN (Debian)
+- name: Проверяем, какая ОС используется
+  debug:
+    msg: "ОС на сервере: {{ ansible_os_family }}"
+
+- name: Установка OpenVPN (Debian-based)
   ansible.builtin.apt:
     name: openvpn
     state: present
-  when: ansible_os_family == "Debian"
+    update_cache: yes
+  when: ansible_os_family | lower == "debian"
+  become: yes
 
-- name: Установка пакетов OpenVPN (RHEL-based)
+- name: Установка OpenVPN (RHEL-based)
   ansible.builtin.yum:
     name: openvpn
     state: present
-  when: ansible_os_family == "RedHat"
+  when: ansible_os_family | lower == "redhat"
+  become: yes
 
 - name: Создание директории для конфигурации OpenVPN-клиента
   ansible.builtin.file:
-    path: /etc/openvpn
+    path: /etc/openvpn/{{ inventory_hostname }}
     state: directory
+    owner: root
+    group: root
     mode: "0755"
+  become: yes
 
 - name: Копирование конфигурационного файла OpenVPN-клиента
   ansible.builtin.template:
-    src: client.conf.j2
-    dest: /etc/openvpn/client.conf
+    src: "clients/{{ inventory_hostname }}.ovpn.j2"
+    dest: "/etc/openvpn/{{ inventory_hostname }}/client.ovpn"
+    owner: root
+    group: root
     mode: "0644"
-  notify: Перезапуск OpenVPN
+  become: yes
+  notify: Перезапуск OpenVPN-клиента
 
 - name: Копирование ключей и сертификатов OpenVPN-клиента
   ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
+    src: "/etc/ansible/roles/openvpn_client/files/clients/{{ inventory_hostname }}/{{ item.src }}"
+    dest: "/etc/openvpn/{{ inventory_hostname }}/{{ item.dest }}"
+    remote_src: yes
+    owner: root
+    group: root
     mode: "0600"
-  with_items:
-    - { src: "keys/ca.crt", dest: "/etc/openvpn/ca.crt" }
-    - { src: "keys/client.crt", dest: "/etc/openvpn/client.crt" }
-    - { src: "keys/client.key", dest: "/etc/openvpn/client.key" }
-  notify: Перезапуск OpenVPN
+  loop:
+    - { src: "ca.crt", dest: "ca.crt" }
+    - { src: "{{ inventory_hostname }}.crt", dest: "client.crt" }
+    - { src: "{{ inventory_hostname }}.key", dest: "client.key" }
+    - { src: "ta.key", dest: "ta.key" }
+  become: yes
+  notify: Перезапуск OpenVPN-клиента
 
-- name: Проверка, запущен ли OpenVPN-клиент
+- name: Включение и запуск OpenVPN-клиента
   ansible.builtin.systemd:
-    name: openvpn
+    name: openvpn-client@{{ inventory_hostname }}
     state: started
     enabled: yes
+  become: yes
 
+- name: Проверка статуса OpenVPN-клиента
+  command: systemctl is-active openvpn-client@{{ inventory_hostname }}
+  register: openvpn_status
+  changed_when: false
+  become: yes
+
+- name: Вывод статуса OpenVPN-клиента
+  debug:
+    msg: "Статус OpenVPN-клиента ({{ inventory_hostname }}): {{ openvpn_status.stdout }}"
+
+# Хендлер для перезапуска OpenVPN-клиента
+- name: Перезапуск OpenVPN-клиента
+  ansible.builtin.systemd:
+    name: openvpn-client@{{ inventory_hostname }}
+    state: restarted
+    enabled: yes
+  become: yes
